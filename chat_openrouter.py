@@ -13,10 +13,13 @@ is installed. Your .env file should contain:
 Or set the environment variable directly:
     export OPENROUTER_API_KEY=your_api_key_here
 
-TEF Canada Mode:
-By default, the interactive chat starts in TEF Canada Expression Orale evaluation mode.
-This can be toggled with /tef-on and /tef-off commands. Use this for evaluating
-French language proficiency according to official TEF criteria.
+TEF Canada Exam Mode:
+This script conducts a live TEF Canada Expression Orale exam. When you start the script,
+the examiner immediately begins the 15-minute oral test with:
+- Section A (5 min): Asking for information about a job posting/ad
+- Section B (10 min): Persuading someone to join an activity
+
+The exam starts automatically - just run the script and interact with the examiner in French!
 """
 
 import os
@@ -34,61 +37,32 @@ except ImportError:
 
 
 # TEF Canada Expression Orale System Prompt
-TEF_SYSTEM_PROMPT = """You are a certified evaluator for the TEF Canada Expression Orale section. Use the official structure and scoring criteria provided by the CCI Paris Île-de-France. Evaluate the candidate's performance based on the following format, section indicators, and evaluation points. Assign a score for each section and an overall CEFR level (A1–C2) with a total score out of 699.
+TEF_SYSTEM_PROMPT = """You are an official examiner for the TEF Canada Expression Orale exam. You conduct the oral examination following the official CCI Paris Île-de-France format.
 
-# 💼 [STRUCTURE GENERALE DE L'EPREUVE]
-- [FORMAT] : 
-  - Section A : 5 minutes — Demander des renseignements
-  - Section B : 10 minutes — Convaincre quelqu'un de participer à une activité
-- [DUREE TOTALE] : 15 minutes
-- [TYPE] : Jeu de rôle avec un jury (situation simulée, généralement par téléphone)
-- [ORDRE] : Section A suivie de Section B
-- [MODALITES] : 
-  - L'épreuve est enregistrée à des fins d'évaluation anonyme
-  - Double évaluation indépendante : jury présent et examinateur CCI Paris Île-de-France
+EXAM FORMAT:
+- Section A: 5 minutes - Demander des renseignements (Asking for information)
+- Section B: 10 minutes - Convaincre quelqu'un de participer à une activité (Persuading someone)
+- Total duration: 15 minutes
+- Mode: Simulated role-play, typically by telephone
 
-# 🧪 [EVALUATION]
+YOUR ROLE AS EXAMINER:
+1. Start Section A immediately by presenting a job posting or classified ad
+2. Answer the candidate's questions naturally (as if you're the advertiser)
+3. After Section A, immediately begin Section B with a new scenario
+4. Act as a participant who needs convincing in Section B
+5. Be natural, friendly, but realistic in your responses
+6. Keep track of time and guide the candidate through both sections
+7. Do NOT evaluate during the exam - only conduct it
 
-## 🔹 Section A — Demander des renseignements
-- [QUALITE GENERALE DU DISCOURS]
-  - Les questions sont-elles en rapport direct avec l'annonce ?
-  - Sont-elles précises et claires ?
-  - Tous les points de l'annonce sont-ils abordés ?
-  - Le candidat fait-il clarifier des réponses vagues ?
-  - L'échange est-il fluide, naturel, et spontané ?
-- [MAITRISE DE LA LANGUE ORALE]
-  - Lexique : richesse, précision, adaptation au contexte
-  - Syntaxe : variété et complexité des structures
-  - Prononciation : clarté, intelligibilité, rythme, accent
+EXAMINATION PROCEDURE:
+- Greet the candidate warmly in French
+- Clearly state the exam format: "Je suis votre examinateur. Cette épreuve dure 15 minutes en deux parties."
+- Begin Section A immediately with a realistic scenario
+- Transition smoothly to Section B after Section A
+- Keep responses brief but informative
+- End the exam professionally with closing remarks
 
-> [RETOUR_SECTION_A]
-> - Points forts :
-> - Points à améliorer :
-> - Score Section A : /100
-
-## 🔹 Section B — Convaincre de participer à une activité
-- [QUALITE DE L'ARGUMENTATION]
-  - Discours structuré avec introduction, arguments, et conclusion ?
-  - Arguments pertinents, logiques, et convaincants ?
-  - Capacité à répondre aux objections ?
-  - Niveau de persuasion et d'implication ?
-- [MAITRISE DE LA LANGUE ORALE]
-  - Lexique : diversité, précision, usage approprié
-  - Syntaxe : maîtrise grammaticale et complexité des phrases
-  - Prononciation : clarté, fluidité, intonation
-
-> [RETOUR_SECTION_B]
-> - Points forts :
-> - Points à améliorer :
-> - Score Section B : /100
-
-## 🧾 [RESULTAT GLOBAL]
-- Niveau CECR estimé : [A1 / A2 / B1 / B2 / C1 / C2]
-- Score total (sur 699) : [XXX]
-
-> [RETOUR_GLOBAL]
-> - Appréciation générale :
-> - Recommandations pour progresser :"""
+BEGIN THE EXAMINATION NOW."""
 
 
 class OpenRouterChat:
@@ -324,24 +298,27 @@ def interactive_chat():
         print("Or pass it directly to the OpenRouterChat class in your code.")
         sys.exit(1)
     
-    print(f"Model: {chat.model}")
-    print("Commands:")
-    print("  /quit or /exit - Exit the chat")
-    print("  /reset - Reset conversation history")
-    print("  /models - Show available models")
-    print("  /switch <model> - Switch model (chat, coder, reasoner)")
-    print("  /tef-on - Enable TEF Canada evaluation mode")
-    print("  /tef-off - Disable TEF Canada evaluation mode")
-    print("  /system <prompt> - Set a custom system prompt")
+    print("=" * 60)
+    print("TEF Canada Expression Orale Exam")
     print("=" * 60)
     print()
-    print("TEF Canada Expression Orale evaluation mode enabled by default.")
-    print("Type '/tef-off' to disable TEF mode, '/tef-on' to re-enable.")
+    print("Note: Type /quit or /exit to leave the exam")
+    print("=" * 60)
     print()
     
-    # Use TEF system prompt by default
+    # TEF system prompt is always used
     system_prompt = TEF_SYSTEM_PROMPT
-    tef_mode = True
+    
+    # Start the exam automatically
+    print("Starting exam...")
+    print()
+    print("Examiner: ", end="", flush=True)
+    
+    # Initial trigger to start the exam
+    for delta, full_response in chat.chat_stream("", system_prompt=system_prompt):
+        print(delta, end="", flush=True)
+    print()
+    print()
     
     while True:
         try:
@@ -352,56 +329,18 @@ def interactive_chat():
             
             # Handle commands
             if user_input.lower() in ["/quit", "/exit"]:
-                print("Goodbye!")
+                print("\nExam terminated. Good luck!")
                 break
             
-            elif user_input.lower() == "/reset":
-                chat.reset_conversation()
-                print("Conversation history reset.")
-                continue
-            
-            elif user_input.lower() == "/models":
-                print("Available DeepSeek models:")
-                for key, model_name in chat.deepseek_models.items():
-                    marker = " <- current" if model_name == chat.model else ""
-                    print(f"  {key}: {model_name}{marker}")
-                continue
-            
-            elif user_input.lower().startswith("/switch "):
-                model_key = user_input.split(" ", 1)[1]
-                chat.switch_model(model_key)
-                continue
-            
-            elif user_input.lower() == "/tef-on":
-                system_prompt = TEF_SYSTEM_PROMPT
-                tef_mode = True
-                chat.reset_conversation()  # Reset to apply TEF prompt
-                print("TEF Canada evaluation mode enabled.")
-                continue
-            
-            elif user_input.lower() == "/tef-off":
-                system_prompt = None
-                tef_mode = False
-                chat.reset_conversation()  # Reset conversation
-                print("TEF Canada evaluation mode disabled.")
-                continue
-            
-            elif user_input.lower().startswith("/system "):
-                system_prompt = user_input.split(" ", 1)[1]
-                tef_mode = False  # Custom prompt disables TEF mode
-                chat.reset_conversation()  # Reset to apply new system prompt
-                print(f"System prompt set: {system_prompt}")
-                continue
-            
-            # Send message to the model with streaming
-            print("Assistant: ", end="", flush=True)
+            # Send message to the model with streaming (always uses TEF system prompt)
+            print("Examiner: ", end="", flush=True)
             for delta, full_response in chat.chat_stream(user_input, system_prompt=system_prompt):
                 print(delta, end="", flush=True)  # Stream output in real-time
             print()  # New line after response
             print()
             
         except KeyboardInterrupt:
-            print("\n\nGoodbye!")
+            print("\n\nExam terminated. Good luck!")
             break
         except Exception as e:
             print(f"Error: {e}")
@@ -447,8 +386,17 @@ def example_usage():
         response = chat.chat("Write a Python function to calculate fibonacci numbers.")
         print(f"Response: {response}\n")
         
+        # Streaming example
+        print("5. Streaming response example:")
+        chat.reset_conversation()
+        chat.switch_model("chat")  # Switch back to chat model
+        print("Streaming: ", end="", flush=True)
+        for delta, _ in chat.chat_stream("Tell me a short story about a robot in 2 sentences."):
+            print(delta, end="", flush=True)
+        print("\n")
+        
         # TEF Canada evaluation example
-        print("5. TEF Canada evaluation mode:")
+        print("6. TEF Canada evaluation mode:")
         chat.reset_conversation()
         sample_transcript = """
         Section A: Le candidat a posé des questions précises sur l'annonce d'emploi, 
